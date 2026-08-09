@@ -1,0 +1,14 @@
+- name: scheduled_workflow_runs
+  webhook: '{{NHOST_FUNCTIONS_URL}}/events/scheduledRuns'
+  schedule: '* * * * *'
+  include_in_metadata: true
+  payload: {}
+  retry_conf:
+    num_retries: 3
+    retry_interval_seconds: 10
+    timeout_seconds: 60
+    tolerance_seconds: 21600
+  headers:
+    - name: nhost-webhook-secret
+      value_from_env: NHOST_WEBHOOK_SECRET
+  comment: Every minute, fires runs for workflows whose scheduled trigger matches the current time.

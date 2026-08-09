@@ -1,0 +1,10 @@
+drop table if exists public.demo_events cascade;
+drop table if exists public.notifications cascade;
+drop table if exists public.step_outputs cascade;
+drop table if exists public.step_runs cascade;
+drop table if exists public.workflow_runs cascade;
+drop table if exists public.workflow_triggers cascade;
+drop table if exists public.workflow_steps cascade;
+drop table if exists public.workflows cascade;
+drop table if exists public.org_members cascade;
+drop table if exists public.organizations cascade;

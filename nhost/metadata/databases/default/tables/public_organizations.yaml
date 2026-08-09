@@ -1,0 +1,43 @@
+table:
+  name: organizations
+  schema: public
+computed_fields:
+  - name: monthly_usage
+    definition:
+      function:
+        name: org_monthly_usage
+        schema: public
+    comment: Org-level usage this month (runs, avg duration) + quota state
+array_relationships:
+  - name: members
+    using:
+      foreign_key_constraint_on:
+        column: org_id
+        table:
+          name: org_members
+          schema: public
+  - name: workflows
+    using:
+      foreign_key_constraint_on:
+        column: org_id
+        table:
+          name: workflows
+          schema: public
+select_permissions:
+  - role: user
+    permission:
+      columns:
+        - id
+        - name
+        - calls_used
+        - calls_allowed
+        - quota_period_start
+        - created_at
+        - updated_at
+      computed_fields:
+        - monthly_usage
+      filter:
+        members:
+          user_id:
+            _eq: X-Hasura-User-Id
+      allow_aggregations: true

@@ -1,0 +1,28 @@
+table:
+  name: step_outputs
+  schema: public
+object_relationships:
+  - name: org
+    using:
+      foreign_key_constraint_on: org_id
+select_permissions:
+  - role: user
+    permission:
+      columns:
+        - id
+        - org_id
+        - workflow_id
+        - workflow_run_id
+        - step_run_id
+        - label
+        - payload
+        - created_at
+      filter:
+        org:
+          members:
+            _and:
+              - user_id:
+                  _eq: X-Hasura-User-Id
+              - role:
+                  _eq: X-Hasura-Org-Role
+      allow_aggregations: true

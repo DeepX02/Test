@@ -1,0 +1,16 @@
+{
+  "name": "agent-workflow-functions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hasura Action handlers + event/cron handlers for the AI Agent Workflow Builder",
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.5.0",
+    "typescript": "^5.5.4"
+  },
+  "packageManager": "npm@10.8.2"
+}

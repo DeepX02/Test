@@ -1,0 +1,151 @@
+table:
+  name: workflow_steps
+  schema: public
+object_relationships:
+  - name: workflow
+    using:
+      foreign_key_constraint_on: workflow_id
+select_permissions:
+  - role: user
+    permission:
+      columns:
+        - id
+        - workflow_id
+        - step_type
+        - name
+        - position
+        - config
+        - created_at
+        - updated_at
+      filter:
+        workflow:
+          org:
+            members:
+              _and:
+                - user_id:
+                    _eq: X-Hasura-User-Id
+                - role:
+                    _eq: X-Hasura-Org-Role
+      allow_aggregations: true
+insert_permissions:
+  - role: user
+    permission:
+      columns:
+        - workflow_id
+        - step_type
+        - name
+        - position
+        - config
+      check:
+        _and:
+          # Layer 1: creator must be an owner/editor of the workflow's org
+          - workflow:
+              org:
+                members:
+                  _and:
+                    - user_id:
+                        _eq: X-Hasura-User-Id
+                    - role:
+                        _in:
+                          - owner
+                          - editor
+          # Layer 2: db_write / notify are owner-only step types
+          - _or:
+              - step_type:
+                  _nin:
+                    - db_write
+                    - notify
+              - workflow:
+                  org:
+                    members:
+                      _and:
+                        - user_id:
+                            _eq: X-Hasura-User-Id
+                        - role:
+                            _eq: owner
+update_permissions:
+  - role: user
+    permission:
+      columns:
+        - name
+        - config
+        - position
+        - step_type
+      filter:
+        _and:
+          - workflow:
+              org:
+                members:
+                  _and:
+                    - user_id:
+                        _eq: X-Hasura-User-Id
+                    - role:
+                        _in:
+                          - owner
+                          - editor
+          - _or:
+              - step_type:
+                  _nin:
+                    - db_write
+                    - notify
+              - workflow:
+                  org:
+                    members:
+                      _and:
+                        - user_id:
+                            _eq: X-Hasura-User-Id
+                        - role:
+                            _eq: owner
+      check:
+        _and:
+          - workflow:
+              org:
+                members:
+                  _and:
+                    - user_id:
+                        _eq: X-Hasura-User-Id
+                    - role:
+                        _in:
+                          - owner
+                          - editor
+          - _or:
+              - step_type:
+                  _nin:
+                    - db_write
+                    - notify
+              - workflow:
+                  org:
+                    members:
+                      _and:
+                        - user_id:
+                            _eq: X-Hasura-User-Id
+                        - role:
+                            _eq: owner
+delete_permissions:
+  - role: user
+    permission:
+      filter:
+        _and:
+          - workflow:
+              org:
+                members:
+                  _and:
+                    - user_id:
+                        _eq: X-Hasura-User-Id
+                    - role:
+                        _in:
+                          - owner
+                          - editor
+          - _or:
+              - step_type:
+                  _nin:
+                    - db_write
+                    - notify
+              - workflow:
+                  org:
+                    members:
+                      _and:
+                        - user_id:
+                            _eq: X-Hasura-User-Id
+                        - role:
+                            _eq: owner

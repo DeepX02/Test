@@ -1,0 +1,53 @@
+[global]
+
+[hasura]
+version = 'v2.48.10-ce'
+adminSecret = '{{ secrets.HASURA_GRAPHQL_ADMIN_SECRET }}'
+webhookSecret = '{{ secrets.NHOST_WEBHOOK_SECRET }}'
+
+[[hasura.jwtSecrets]]
+type = 'RS256'
+key = '{{ secrets.JWT_PUBLIC_KEY }}'
+signingKey = '{{ secrets.JWT_PRIVATE_KEY }}'
+kid = 'bskhwtelkajsd'
+
+[hasura.settings]
+corsDomain = ['*']
+enableConsole = true
+enableAllowList = false
+enableRemoteSchemaPermissions = false
+liveQueriesMultiplexedRefetchInterval = 1000
+
+[hasura.logs]
+level = 'warn'
+
+[functions]
+[functions.node]
+version = 22
+
+[auth]
+[auth.signUp]
+enabled = true
+[auth.user]
+[auth.user.roles]
+default = 'user'
+allowed = ['user', 'me']
+[auth.user.locale]
+default = 'en'
+allowed = ['en']
+[auth.session]
+[auth.session.accessToken]
+expiresIn = 900
+[auth.session.refreshToken]
+expiresIn = 2592000
+[auth.method]
+[auth.method.emailPassword]
+hibpEnabled = false
+emailVerificationRequired = false
+passwordMinLength = 9
+[auth.method.smsPasswordless]
+enabled = false
+[auth.method.webauthn]
+enabled = false
+[auth.totp]
+enabled = false

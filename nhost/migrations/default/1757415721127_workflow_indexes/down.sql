@@ -1,0 +1,12 @@
+drop function if exists public.org_monthly_usage(public.organizations);
+drop index if exists public.idx_demo_events_org;
+drop index if exists public.idx_notifications_org;
+drop index if exists public.idx_step_runs_status;
+drop index if exists public.idx_step_runs_run_position;
+drop index if exists public.idx_workflow_runs_status;
+drop index if exists public.idx_workflow_runs_workflow_started;
+drop index if exists public.idx_workflow_triggers_workflow;
+drop index if exists public.idx_workflow_steps_workflow_position;
+drop index if exists public.idx_workflows_org_id;
+drop index if exists public.idx_org_members_org_id;
+drop index if exists public.idx_org_members_user_id;

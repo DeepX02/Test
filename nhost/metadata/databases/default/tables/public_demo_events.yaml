@@ -1,0 +1,59 @@
+table:
+  name: demo_events
+  schema: public
+object_relationships:
+  - name: org
+    using:
+      foreign_key_constraint_on: org_id
+select_permissions:
+  - role: user
+    permission:
+      columns:
+        - id
+        - org_id
+        - message
+        - created_at
+      filter:
+        org:
+          members:
+            _and:
+              - user_id:
+                  _eq: X-Hasura-User-Id
+              - role:
+                  _eq: X-Hasura-Org-Role
+      allow_aggregations: true
+insert_permissions:
+  - role: user
+    permission:
+      columns:
+        - org_id
+        - message
+      check:
+        org:
+          members:
+            _and:
+              - user_id:
+                  _eq: X-Hasura-User-Id
+              - role:
+                  _eq: X-Hasura-Org-Role
+event_triggers:
+  - name: demo_event_run_starter
+    definition:
+      enable_manual: true
+      insert:
+        columns: '*'
+    retry_conf:
+      interval_sec: 10
+      num_retries: 3
+      timeout_sec: 30
+    webhook: '{{NHOST_FUNCTIONS_URL}}/events/dbEventRuns'
+    headers:
+      - name: nhost-webhook-secret
+        value_from_env: NHOST_WEBHOOK_SECRET
+    cleanup_config:
+      batch_size: 10000
+      clean_invocation_logs: true
+      clear_older_than: 168
+      paused: false
+      schedule: 0 0 * * *
+      timeout: 60

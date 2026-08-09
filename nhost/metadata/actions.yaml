@@ -1,0 +1,76 @@
+actions:
+  - name: triggerWorkflowRun
+    definition:
+      kind: synchronous
+      handler: '{{NHOST_FUNCTIONS_URL}}/triggerWorkflowRun'
+      forward_client_headers: true
+      headers: []
+      timeout: 60
+      request_transform: {}
+      response_transform: {}
+    permissions:
+      - role: user
+    comment: Starts a workflow run after verifying the caller's org membership + role and the org quota.
+  - name: approveStep
+    definition:
+      kind: synchronous
+      handler: '{{NHOST_FUNCTIONS_URL}}/approveStep'
+      forward_client_headers: true
+      headers: []
+      timeout: 60
+      request_transform: {}
+      response_transform: {}
+    permissions:
+      - role: user
+    comment: Approves a paused approval_gate step. The handler re-checks the approver's role before resuming.
+  - name: webhookStartRun
+    definition:
+      kind: synchronous
+      handler: '{{NHOST_FUNCTIONS_URL}}/webhookStartRun'
+      forward_client_headers: true
+      headers: []
+      timeout: 60
+      request_transform: {}
+      response_transform: {}
+    permissions:
+      - role: user
+    comment: Inbound webhook endpoint that starts a run for the workflow whose webhook trigger matches the token.
+custom_types:
+  enums: []
+  input_objects:
+    - name: triggerWorkflowRunInput
+      fields:
+        - name: workflow_id
+          type: uuid!
+        - name: input
+          type: jsonb
+    - name: approveStepInput
+      fields:
+        - name: step_run_id
+          type: uuid!
+    - name: webhookStartRunInput
+      fields:
+        - name: token
+          type: String!
+        - name: payload
+          type: jsonb
+  objects:
+    - name: triggerWorkflowRunOutput
+      fields:
+        - name: run_id
+          type: uuid!
+        - name: workflow_id
+          type: uuid!
+        - name: status
+          type: String!
+        - name: message
+          type: String
+    - name: approveStepOutput
+      fields:
+        - name: run_id
+          type: uuid!
+        - name: status
+          type: String!
+        - name: message
+          type: String
+  scalars: []
