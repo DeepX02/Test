@@ -37,6 +37,9 @@ export async function callHttp(config: Record<string, unknown>, ctx: TemplateCon
       body: bodyValue !== undefined ? (typeof bodyValue === 'string' ? bodyValue : JSON.stringify(bodyValue)) : undefined,
       signal: controller.signal,
     });
+    if (res.status >= 500) {
+      throw new AppError(500, `http_request ${method} ${url} returned HTTP ${res.status} ${res.statusText}`);
+    }
     const raw = await res.text();
     let body: unknown = raw;
     try {
@@ -69,13 +72,13 @@ const DB_WRITE_TABLES: Record<string, { graphql: string; allowedColumns: string[
   },
 };
 
-export async function execDbWrite(config: Record<string, unknown>, ctx: DbWriteContext): Promise<void> {
+export async function execDbWrite(config: Record<string, unknown>, ctx: DbWriteContext, renderCtx: TemplateContext): Promise<void> {
   const table = String(config.table ?? '');
   const target = DB_WRITE_TABLES[table];
   if (!target) {
     throw new AppError(400, `db_write target table "${table}" is not allowed`);
   }
-  const data = (renderTemplate(config.data ?? {}, ctx) ?? {}) as Record<string, unknown>;
+  const data = (renderTemplate(config.data ?? {}, renderCtx) ?? {}) as Record<string, unknown>;
   const row: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     if (!target.allowedColumns.includes(key)) {
@@ -102,11 +105,14 @@ export interface NotifyContext {
   stepRunId: string;
 }
 
-export async function execNotify(config: Record<string, unknown>, ctx: NotifyContext): Promise<void> {
-  const channel = String(config.channel ?? 'slack');
-  const to = String(config.to ?? '') || null;
-  const title = String(config.title ?? 'Workflow alert') || null;
-  const message = String(config.message ?? '') || null;
+export async function execNotify(config: Record<string, unknown>, ctx: NotifyContext, renderCtx: TemplateContext): Promise<void> {
+  const channel = String(renderTemplate(config.channel ?? 'slack', renderCtx) ?? 'slack');
+  const toRaw = renderTemplate(config.to, renderCtx);
+  const to = toRaw === undefined || toRaw === null || toRaw === '' ? null : String(toRaw);
+  const titleRaw = renderTemplate(config.title, renderCtx);
+  const title = titleRaw === undefined || titleRaw === null || titleRaw === '' ? 'Workflow alert' : String(titleRaw);
+  const messageRaw = renderTemplate(config.message, renderCtx);
+  const message = messageRaw === undefined || messageRaw === null || messageRaw === '' ? null : String(messageRaw);
 
   await gql(
     `mutation QueueNotification($objects: [notifications_insert_input!]!) {

@@ -402,12 +402,12 @@ export async function executeSteps(opts: ExecuteOptions): Promise<RunResult> {
             workflowId: workflow.id,
             runId,
             stepRunId,
-          });
+          }, ctx);
           output = { written: true, table: (step.config?.table as string) ?? null };
           break;
         }
         case 'notify': {
-          await execNotify(step.config ?? {}, { orgId: workflow.org_id, runId, stepRunId });
+          await execNotify(step.config ?? {}, { orgId: workflow.org_id, runId, stepRunId }, ctx);
           output = { queued: true, channel: (step.config?.channel as string) ?? 'slack' };
           break;
         }

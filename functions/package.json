@@ -12,5 +12,8 @@
     "@types/node": "^22.5.0",
     "typescript": "^5.5.4"
   },
+  "scripts": {
+    "test:engine": "tsc --outDir dist && node ../scripts/engine-test.mjs"
+  },
   "packageManager": "npm@10.8.2"
 }

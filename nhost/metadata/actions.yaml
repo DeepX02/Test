@@ -73,4 +73,14 @@ custom_types:
           type: String!
         - name: message
           type: String
+    - name: webhookStartRunOutput
+      fields:
+        - name: run_id
+          type: uuid!
+        - name: workflow_id
+          type: uuid!
+        - name: status
+          type: String!
+        - name: message
+          type: String
   scalars: []

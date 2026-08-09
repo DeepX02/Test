@@ -13,8 +13,10 @@ serverless function handlers. Runs stream live via `graphql-ws` subscriptions.
 ## Features
 
 - **6 step types**: `llm_call` (Groq / OpenAI / OpenRouter / Gemini, with a
-  zero-config stub fallback), `http_request`, `db_write` (owner-only),
-  `notify` (owner-only), `conditional_branch`, `approval_gate`.
+  zero-config stub fallback), `http_request` (with one retry on failure),
+  `db_write` (owner-only), `notify` (owner-only), `conditional_branch` (LLM
+  output drives branching, incl. `else_position` jumps), `approval_gate`
+  (pause / resume).
 - **4 trigger types**: manual, webhook (token-authenticated), scheduled
   (cron), database_event.
 - **Two permission layers** — see [docs/architecture.md](docs/architecture.md).
@@ -39,7 +41,7 @@ functions/          nhost serverless functions (runner engine, Actions, triggers
   webhookStartRun.ts        Action + raw HTTP endpoint (token-gated)
   events/                   cron + db-event + notify delivery handlers
 nhost/
-  nhost.toml        project config (Hasura, Auth, Functions, Storage)
+  nhost.toml        project config (Hasura, Auth, Functions)
   migrations/       Postgres schema, indexes, monthly_usage SQL function
   metadata/         Hasura metadata: tables, relationships, permissions,
                     actions, cron + event triggers
@@ -47,7 +49,7 @@ nhost/
   emails/           (required by nhost)
 frontend/           Next.js 15 App Router app
 docs/               architecture deep-dive + live demo script
-scripts/            demo-helper.mjs (create users / add members / list)
+scripts/            engine-test.mjs + demo-helper.mjs
 ```
 
 ## Quick start
@@ -95,7 +97,49 @@ All passwords: **`WorkflowDemo123!`**
 
 Open the seeded **Support Triage** workflow as `alice@acme.com` and click
 **▶ Run workflow** to watch it stream through the LLM classify → HTTP lookup →
-branch → approval gate → db_write pipeline.
+branch → approval gate → db_write → notify pipeline. Run it with a refund
+keyword (e.g. *"I want a refund for order #42"*) to hit the branch → approval
+gate path, and with any other message to see the branch end the run early.
+
+## Verifying the engine (27 automated scenarios)
+
+The core engine — all four trigger types, both permission layers, approval
+pause/resume, branching, quota, retries, and failure paths — is exercised end
+to end against a real execution harness. It compiles the actual
+`functions/` TypeScript, swaps in an in-memory GraphQL adapter through the
+`gql` export seam, and drives the real handlers with mock requests:
+
+```bash
+npm --prefix functions run test:engine
+```
+
+Run with Node 18+ (no Docker, no nhost, no API keys required). The harness
+(`scripts/engine-test.mjs`) currently runs **27 scenarios** covering:
+
+- **Manual trigger** happy path: `llm_call` (stub) → `conditional_branch`
+  (LLM output drives the branch) → `http_request` (real HTTP against a local
+  upstream) → `db_write` → `approval_gate` (pause) → `notify`, then resume via
+  `approveStep`.
+- **Layer 1 (role + org)**: viewer cannot trigger (403), non-member from
+  another org cannot trigger by id (403), inactive workflow is refused (400).
+- **Layer 2 (approval)**: viewer cannot approve (403), non-member cannot
+  approve (403), non-paused / non-gate steps are refused (409), and a gate
+  configured with `approvers: ['editor']` blocks the owner and lets an editor
+  through.
+- **Branching**: `else_position` jump skips the HTTP step; branch end stops the
+  run early.
+- **Other triggers**: webhook start (valid token / bad token 404 / missing
+  token 400), database_event start from a `demo_events` INSERT (webhook-secret
+  enforced), scheduled cron start with `last_fired_at` debounce.
+- **Quota**: `429` when exhausted, lazy 30-day reset, increment on completion.
+- **Retries & failures**: transient HTTP 5xx is retried once
+  (`attempt_count=2`); forbidden `db_write` columns and unknown step types
+  fail the run permanently; notify event delivery (simulated Slack).
+- **Templates**: `{{ input.* }}`, `{{ steps.N.output.* }}` and the
+  `{{ last.output.* }}` alias all resolve.
+
+Every scenario asserts the HTTP status code, the run/step statuses, and the
+persisted rows. Exit code is non-zero on any failure.
 
 ## Deploying to the cloud
 
@@ -116,11 +160,22 @@ See **[docs/demo-script.md](docs/demo-script.md)** — a 4-minute script coverin
 permission layers 1 & 2, live streaming, approval gates, branching, all trigger
 types, cross-org isolation, and quota.
 
+## Final Task checklist
+
+| Requirement | Where it's implemented | Verified by |
+|---|---|---|
+| Two organizations, users & roles | `nhost/seeds` (`Acme` = alice/bob/carol, `Globex` = dave/erin/frank) | S2–S5, S19 |
+| Org A owner builds a ≥3-step workflow incl. `llm_call`, `http_request`, `conditional_branch` driven by LLM output | seeded *Support Triage* workflow | S1 |
+| Started two ways (manual + webhook/event) | `triggerWorkflowRun` Action + `webhookStartRun` / `dbEventRuns` / `scheduledRuns` | S1, S8–S15 |
+| `approval_gate` pause; only owner/editor may approve | `approveStep` handler + `org_members` role re-check | S1, S4–S6, S19 |
+| Live step-by-step streaming incl. paused state | `RUN_PROGRESS` subscription over `graphql-ws` | — (frontend build) |
+| Org B user cannot see / trigger / approve Org A by id | Layer-1 & Layer-2 checks in handlers + Hasura filters | S3, S5 |
+
 ## Notes
 
-- `nhost.toml` pins specific Hasura/Auth/Storage versions; if the CLI warns
-  about them, update the pins to whatever your nhost CLI expects — the rest of
-  the configuration is version-agnostic.
+- `nhost.toml` pins specific Hasura/Auth versions; if the CLI warns about them,
+  update the pins to whatever your nhost CLI expects — the rest of the
+  configuration is version-agnostic.
 - The webhook endpoint is both a Hasura Action (`webhookStartRun`) and a raw
   `POST /v1/webhookStartRun` function endpoint; the Action is what the UI uses.
 - `scripts/demo-helper.mjs` can create users / assign org memberships / list

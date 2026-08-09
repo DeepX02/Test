@@ -11,6 +11,10 @@ export function resolvePath(ctx: TemplateContext, path: string): unknown {
   let cur: unknown = ctx as Record<string, unknown>;
   for (const part of parts) {
     if (cur === null || cur === undefined) return undefined;
+    if (part === 'last' && cur === ctx) {
+      cur = resolveLastStepOutput(ctx);
+      continue;
+    }
     if (Array.isArray(cur)) {
       const idx = Number(part);
       cur = Number.isInteger(idx) ? (cur as unknown[])[idx] : undefined;
@@ -21,6 +25,25 @@ export function resolvePath(ctx: TemplateContext, path: string): unknown {
     }
   }
   return cur;
+}
+
+/**
+ * `{{ last.output.xyz }}` resolves to the output of the most recently
+ * completed step (mirrors `{{ steps.<max position>.output.xyz }}`). Runs that
+ * resume after an approval rebuild `ctx.steps` from the persisted step_runs,
+ * so the highest position with an output is used.
+ */
+function resolveLastStepOutput(ctx: TemplateContext): unknown {
+  const steps = (ctx as Record<string, unknown>)['steps'] as
+    | Record<string, { output: unknown }>
+    | undefined;
+  if (!steps || typeof steps !== 'object') return undefined;
+  const positions = Object.keys(steps)
+    .map(Number)
+    .filter((n) => Number.isInteger(n) && n >= 0);
+  if (positions.length === 0) return undefined;
+  const last = steps[Math.max(...positions)];
+  return { output: last?.output };
 }
 
 export function renderTemplate(input: unknown, ctx: TemplateContext): unknown {
