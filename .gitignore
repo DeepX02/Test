@@ -1,6 +1,9 @@
 # Local nhost state (created by `nhost up`)
 .nhost/
 
+# Session handoff notes (local only, never pushed)
+HANDOFF.txt
+
 # Environment / secrets
 .env
 .env.local
