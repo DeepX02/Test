@@ -1,0 +1,20 @@
+# Local nhost state (created by `nhost up`)
+.nhost/
+
+# Environment / secrets
+.env
+.env.local
+.env*.local
+
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+out/
+dist/
+*.tsbuildinfo
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
